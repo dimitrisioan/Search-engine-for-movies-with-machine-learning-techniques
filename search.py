@@ -27,6 +27,6 @@ def insert_movies_to_elasticsearch(object):
         counter += 1
     print('Movies inserted successfully')
 
-def main():
+if __name__ == "__main__":
     movies = load_and_convert_CSV_to_JSON(filename)
     insert_movies_to_elasticsearch(movies)
