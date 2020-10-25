@@ -1,7 +1,7 @@
-
 import json
 import codecs
-from bottle import run, get
+import pandas as pd
+from bottle import route, get, post, template, static_file, request, run
 from elasticsearch import Elasticsearch
 
 DOMAIN = "localhost"
@@ -10,6 +10,7 @@ BOTTLE_PORT = 8000
 
 INDEX = 'movies'
 DOC_TYPE = 'movie'
+RESULTS_PER_PAGE = 10
 
 try:
     # concatenate a string for the Elasticsearch connection
@@ -28,10 +29,10 @@ def get_elasticsearch_data(client, query={}, page=0):
     if client != None:
         # get 10 of the Elasticsearch documents from index
         docs = client.search(
-            from_ = page, # for pagination
+            from_ = RESULTS_PER_PAGE * page, # for pagination
             index = INDEX,
             body = {
-                'size' : 10,
+                'size' : RESULTS_PER_PAGE,
                 'query': {
                     # pass query paramater
                     'match_all' : query
@@ -48,60 +49,73 @@ def get_elasticsearch_data(client, query={}, page=0):
     return doc
 
 # gef a function that will return HTML string for frontend
-def html_elasticsearch():
+def html_elasticsearch(view_page=0):
 
     html_file = codecs.open("index.html", 'r')
     html = html_file.read()
 
     # get all of the Elasticsearch indices, field names, & documents
-    elastic_data = get_elasticsearch_data(client)
+    elastic_data = get_elasticsearch_data(client, page=view_page)
+    dataFrame = pd.DataFrame(elastic_data)
 
     # if there's no client then show on frontend
     if client != None:
         pass
-        # print ("html_elasticsearch() client:", client)
 
-        # iterate over the index names
-        # for index, val in elastic_data.items():
-            # pass
+        html += '<div class="my_container">'
+        html += '<br>'
+        html += '<div class="page-header text-center">'
+        html +=     '<h1>Search for a movie</h1>'
+        html += '</div>'
+        html += '<span style="font-size: 1.2em;"><strong>Index name:</strong>' + str(dataFrame['_index'].iloc[0]) + '</span>'
+        html += '<p style="font-size: 1.2em;"><strong>Doc Type:</strong>' + str(dataFrame['_type'].iloc[0]) + '</p>'
+        html += '<table id="result_table" class="table table-striped table-hover">'
+        html +=     '<thead>'
+        html +=         '<tr>'
+        html +=             '<th scope="col">#</th>'
+        html +=             '<th scope="col">Id</th>'
+        html +=             '<th scope="col">Score</th>'
+        html +=             '<th scope="col">Movie Id</th>'
+        html +=             '<th scope="col">Title</th>'
+        html +=             '<th scope="col">Genres</th>'
+        html +=         '</tr>'
+        html +=     '</thead>'
+        html +=     '<tbody>'
 
-#             # create a new HTML table from the index name
-#             html += '<br><h3>Index name: ' + str(index) + '</h3>'
-#             html += '<table id="' + str(index) + '" class="table table-responsive">'
+        for row in dataFrame.itertuples():
+            index = row.Index
+            id = row._3
+            score = row._4
+            movie = row._5
 
-#             # grab the "fields" list attribute created in get_elasticsearch_data()
-#             fields = source_data = elastic_data[index]["fields"]
-#             print ("\n\nfields:", fields)
+            # new table row
+            html += '<tr>'
 
-#             # new table row
-#             html += '\n<tr>'
+            # enumerate() over the index fields
+            html += '<th scope="row">' + str(index) + '</th>'
+            html += '<td>' + str(id) + '</td>'
+            html += '<td>' + str(score) + '</td>'
+            html += '<td>' + str(movie.get('movieId')) + '</td>'
+            html += '<td>' + str(movie.get('title')) + '</td>'
+            html += '<td>' + str(movie.get('genres')) + '</td>'
 
-#             # enumerate() over the index fields
-#             for num, field in enumerate(fields):
-#                 html += '<th>' + str(field) + '</th>'
+            # close the table row for the Elasticsearch index fields
+            html += '</tr>'
 
-#             # close the table row for the Elasticsearch index fields
-#             html += '\n</tr>'
+        # close the table tag for the Elasticsearch index
+        html += '</body><br>'
+        html += '</table><br>'
 
-#             # get all of the docs in the Elasticsearch index
-#             all_docs = elastic_data[index]["docs"]
-#             print ("\nall_docs type:", type(all_docs))
-
-#             # enumerate() over the list of docs
-#             for num, doc in enumerate(all_docs):
-#                 print ("\ndoc:", doc)
-
-#                 # new row for each doc
-#                 html += '<tr>\n'
-
-#                 # iterate over the _source dict for the doc
-#                 for f, val in doc["_source"].items():
-#                     html += '<td>' + str(val) + '</td>'
-               
-#                 html += '</tr>'
-
-#             # close the table tag for the Elasticsearch index
-#             html += '</table><br>'
+        html += '<nav aria-label="...">'
+        html +=     '<ul class="pagination pagination-lg justify-content-center">'
+        html +=       '<li class="page-item disabled">'
+        html +=         '<a class="page-link" style="cursor: pointer;" onclick="javasrcript:previousPage()">Previous</a>'
+        html +=       '</li>'
+        html +=       '<li class="page-item">'
+        html +=         '<a class="page-link" style="cursor: pointer;" onclick="javasrcript:nextPage()">Next</a>'
+        html +=       '</li>'
+        html +=     '</ul>'
+        html += '</nav>'
     elif client == None:
         html += '<h3 style="color:red">Warning: Elasticsearch cluster is not running on'
         html += ' port: ' + str(ELASTIC_PORT) + '</h3>'
@@ -116,7 +130,13 @@ def elastic_app():
     # call the func to return HTML to framework
     return html_elasticsearch()
 
-# # pass a port for the framework's server
+@route('/page/<num>')
+def select_page(num=0):
+    # call the func to return HTML to framework
+    page = int(num)
+    return html_elasticsearch(page)
+    
+# pass a port for the framework's server
 run(
     host = DOMAIN,
     port = BOTTLE_PORT,
