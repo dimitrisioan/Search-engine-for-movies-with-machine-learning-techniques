@@ -21,7 +21,6 @@ def searchMovies(query):
     print(tabulate(dataFrame, headers='keys', tablefmt='psql'))
 
 
-
 if __name__ == '__main__':
     while(True):
         print('1--Search for a movie')
@@ -31,17 +30,17 @@ if __name__ == '__main__':
             print('What are you looking for?')
             search_term = input()
             query = {
-                        "from" : 0, 
-                        "size" : 20,
-                        "query": 
-                        {
-                            "simple_query_string": 
-                                { 
-                                    "query": search_term, 
-                                    "fields": ["title", "genres"]
-                                }
-                        }
+                "from": 0,
+                "size": 20,
+                "query":
+                {
+                    "simple_query_string":
+                    {
+                        "query": search_term,
+                        "fields": ["title", "genres"]
                     }
+                }
+            }
             searchMovies(query)
         elif(decision == 2):
             exit(0)

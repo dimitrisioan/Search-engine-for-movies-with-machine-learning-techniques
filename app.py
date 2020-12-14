@@ -62,11 +62,6 @@ def html_elasticsearch(view_page=0):
     if client != None:
         pass
 
-        html += '<div class="my_container">'
-        html += '<br>'
-        html += '<div class="page-header text-center">'
-        html +=     '<h1>Search for a movie</h1>'
-        html += '</div>'
         html += '<span style="font-size: 1.2em;"><strong>Index name:</strong>' + str(dataFrame['_index'].iloc[0]) + '</span>'
         html += '<p style="font-size: 1.2em;"><strong>Doc Type:</strong>' + str(dataFrame['_type'].iloc[0]) + '</p>'
         html += '<table id="result_table" class="table table-striped table-hover">'
