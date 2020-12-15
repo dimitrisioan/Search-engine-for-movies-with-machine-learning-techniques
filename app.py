@@ -17,7 +17,7 @@ try:
     domain_str = DOMAIN + ":" + str(ELASTIC_PORT)
     # declare a client instance of the Python Elasticsearch library
     client = Elasticsearch( domain_str )
-    # info() method raises error if domain or conn is invalid
+    # info() method raises error if domain or connection is invalid
     print (json.dumps( Elasticsearch.info(client), indent=4 ), "\n")
 except Exception as err:
     print ("Elasticsearch() ERROR:", err, "\n")

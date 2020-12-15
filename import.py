@@ -7,7 +7,6 @@ filename = 'movies.csv'
 es = Elasticsearch(
     ['localhost'],
     port=9200
-
 )
 
 def load_and_convert_CSV_to_JSON(filename):
@@ -29,4 +28,4 @@ def insert_movies_to_elasticsearch(object):
 if __name__ == "__main__":
     movies = load_and_convert_CSV_to_JSON(filename)
     insert_movies_to_elasticsearch(movies)
-    c
+    
