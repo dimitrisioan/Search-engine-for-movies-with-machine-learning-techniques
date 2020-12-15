@@ -4,7 +4,8 @@ import pprint as pp
 import pandas as pd
 from tabulate import tabulate
 from elasticsearch import Elasticsearch
-
+import ast
+import numpy as np
 filename = 'movies.csv'
 es = Elasticsearch(
     ['localhost'],
@@ -15,8 +16,8 @@ INDEX = 'movies'
 DOC_TYPE = 'movie'
 
 
-user_weight = 2
-users_weight = 1
+user_weight = 1
+avg_weight = 0.5
 
 def convert_DataFrame_to_JSON(df):
     result = df.to_json(orient="records")
@@ -26,32 +27,50 @@ def convert_DataFrame_to_JSON(df):
     return json.loads(json_str)
 
 def searchMovies(query):
-    request = es.search(index=INDEX, doc_type=DOC_TYPE, body=query)
-    dataFrame = pd.DataFrame(request['hits']['hits'])
+    response = es.search(index=INDEX, doc_type=DOC_TYPE, body=query)
+    print("documents returned:",  len(response["hits"]["hits"]))
 
-    return dataFrame
+    # convert elastic search results to dataframe
+    elastic_df = pd.DataFrame(response['hits']['hits'])
 
-    # print("{} documents found".format(len(request['hits']['hits'])))
-    # print(tabulate(dataFrame, headers='keys', tablefmt='psql'))
+    # get the movies data in a separate dataframe
+    _source = elastic_df[['_source']].copy()
+
+    # convert movies data to dict
+    js=json.loads(_source.to_json()) 
+
+    # the the first value from the dict 
+    # contains all the movies data
+    key, value = js.popitem()
+
+    # convert them to a dataframe where each value is separate
+    movies_object = pd.DataFrame.from_dict(value, orient='index')
+
+    # add an index column based on the row index
+    movies_object['index'] = movies_object.reset_index().index
+
+    # add an index column based on the row index
+    elastic_df['index'] = elastic_df.reset_index().index
+
+    # merge the dataframes
+    results = pd.merge(movies_object, elastic_df)
+
+    # delete all the unnecessary columns
+    del results['index']
+    del results['_index']
+    del results['_type']
+    del results['_source']
+    del results['_id']
+
+    return results
 
 
-dataFrame = pd.read_csv("ratings.csv") 
-# pd.set_option('display.max_rows', None)
-movies_avg_ratings = dataFrame.groupby(['movieId'])['rating'].mean()
 
-print(movies_avg_ratings.loc[:5])
+ratings_df = pd.read_csv("ratings.csv") 
+movies_avg_ratings = ratings_df.groupby(['movieId'])['rating'].mean()
 
-
-
-# user_ratings = dataFrame.loc[dataFrame['userId'] == 1]
-
-# json = convert_DataFrame_to_JSON(user_ratings)
-
-# pp.pprint(json)
-
-#TODO: Import ratings per movie on elastic search
-
-#TODO: Create query using the new score
+user_ratings = ratings_df.loc[ratings_df['userId'] == 86]
+user_ratings.rename(columns={'rating': 'user_rating'}, inplace=True)
 
 # metric = el_score + user_weight * user_rating + users_weight * users_rating
 
@@ -76,11 +95,15 @@ if __name__ == '__main__':
                 }
             }
             results = searchMovies(query)
-            new = tabulate(results, headers='keys', tablefmt='psql')
-            print(results)
+            
+            max_score = results.loc[results['_score'].idxmax()]._score
 
-            # new = movies_avg_ratings.merge(results[['rating', '_score']], left_on='movieId', right_on='id')
-            print(type(movies_avg_ratings))
+            results = pd.merge(results, movies_avg_ratings, on='movieId')
+            results = pd.merge(results, user_ratings[['user_rating', 'movieId']], on='movieId', how='left').fillna(0)
+            results.rename(columns={'rating': 'avg_rating'}, inplace=True)
+            results['score'] = (results['avg_rating'] + user_weight * results['user_rating'] + avg_weight * results['_score'])/max_score
+            results.sort_values(by = 'score', inplace=True, ascending=False)
+            print(results)
 
         elif(decision == 2):
             exit(0)

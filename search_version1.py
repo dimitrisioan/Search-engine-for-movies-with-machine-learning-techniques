@@ -29,6 +29,9 @@ def load_and_convert_CSV_to_JSON(filename):
 
     return json.loads(json_str)
 
+ratings = pd.read_csv("ratings.csv") 
+
+
 
 if __name__ == '__main__':
     while(True):
@@ -63,7 +66,8 @@ if __name__ == '__main__':
         elif(decision == 2):
             #give user id and check if exists in ratings file
                 requested_id = int(input('Please give your user_id:'))
-                
+                rating = ratings.loc[ratings['userId'] == requested_id]
+                print(rating)
                 #find userid in ratings file check which movieid has userid 
                 #check if user_id exitsis ratings field and and if yes ccontinue find userid in ratings file check which movieid has userid if not continue and reask user to give correct userid 
             #search for the movie and edit with the new metric
