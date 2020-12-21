@@ -73,20 +73,7 @@ movies_avg_ratings = ratings_df.groupby(['movieId'])['rating'].mean()
 user_ratings = ratings_df.loc[ratings_df['userId'] == 86]
 user_ratings.rename(columns={'rating': 'user_rating'}, inplace=True)
 
-# metric = el_score + user_weight * user_rating + users_weight * users_rating
-
-
-
-
-
-
-
-
-
-
 #------------------------------------------------------------------------------------------
-
-
 
 def load_and_convert_CSV_to_JSON(filename):
     dataFrame2 = pd.read_csv("ratings.csv") 
@@ -119,8 +106,8 @@ if __name__ == '__main__':
             print('What are you looking for?')
             search_term = input()
             query = {
-                "from": 0,
-                "size": 20,
+                # "from": 0,
+                # "size": 20,
                 "query":
                 {
                     "simple_query_string":
@@ -130,17 +117,17 @@ if __name__ == '__main__':
                     }
                 }
             }
-            searchMovies(query)
+            results = searchMovies(query)
+            print(results)
         elif(decision == 2):
             #give user id and check if exists in ratings file
                 requested_id = int(input('Please give your user_id:'))
                 rating = ratings.loc[ratings['userId'] == requested_id]
-                print(rating)
                 print('What are you looking for?')
                 search_term = input()
                 query = {
-                    "from": 0,
-                    "size": 20,
+                    # "from": 0,
+                    # "size": 20,
                     "query":
                     {
                         "simple_query_string":
